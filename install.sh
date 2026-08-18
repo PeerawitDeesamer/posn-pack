@@ -7,12 +7,12 @@
 #   bash install.sh --no-rclone  # skip Google Drive tooling
 #
 # Also runs straight off GitHub with no checkout:
-#   curl -fsSL https://raw.githubusercontent.com/OWNER/REPO/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/PeerawitDeesamer/posn-pack/main/install.sh | bash
 set -uo pipefail
 
 # ---- EDIT THIS after creating the GitHub repo -------------------------------
 # Used only for the curl-pipe path above, to fetch the rest of the files.
-DEFAULT_REPO="YOUR-GITHUB-USERNAME/posn-pack"
+DEFAULT_REPO="PeerawitDeesamer/posn-pack"
 # -----------------------------------------------------------------------------
 
 SELF="${BASH_SOURCE[0]:-}"
