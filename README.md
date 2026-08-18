@@ -1,7 +1,26 @@
 # POSN Pack — skill สร้างข้อสอบเทียม สอวน. คอมพิวเตอร์ (ค่าย 1)
 
-Claude Code skill สำหรับสร้างข้อสอบเทียม 50 ข้อ พร้อมเฉลยละเอียด เป็น PDF ด้วย XeLaTeX
+Claude Code skill สำหรับสร้างข้อสอบเทียม พร้อมเฉลยละเอียด เป็น PDF ด้วย XeLaTeX
 ฟอนต์ TH Sarabun New ขนาดตรงกับข้อสอบจริงปี 68 แล้วอัปขึ้น Google Drive
+
+สั่งได้ว่าจะเอา
+
+| เลือก | ตัวเลือก |
+|---|---|
+| พาร์ท | คณิตศาสตร์ / วิทยาการคำนวณ / ทั้งฉบับตามโครงปี 66-68 |
+| รูปแบบ | ปรนัย 4 ตัวเลือก / อัตนัยเติมคำตอบ / ผสมสองตอน |
+| ความยาก | `easy` `standard` (เท่าข้อสอบจริง) `hard` `brutal` — เกณฑ์ 5 ระดับที่วัดได้ |
+| เรื่องที่เน้น | 19 หัวข้อ เช่น เรขาคณิต การนับ ลูป `while` การนับจำนวนครั้งการทำงาน |
+| จำนวนข้อ + เลขชุด | กำหนดเองหรือใช้ค่าปริยาย |
+
+`scripts/exam_blueprint.py` แปลงสเปกพวกนี้เป็นพิมพ์เขียวรายข้อ (ข้อไหนหัวข้ออะไร ระดับไหน)
+พร้อมประเมินเวลาทำเทียบเวลาสอบจริง 180 นาที ก่อนเขียนโจทย์ข้อแรก
+
+```bash
+python3 scripts/exam_blueprint.py --list          # ดูรหัสหัวข้อ ระดับ พรีเซ็ตทั้งหมด
+python3 scripts/exam_blueprint.py --part comp --format mixed \
+        --difficulty hard --focus pyloop,algocount --count 30 --set 2
+```
 
 repo นี้คือชุดติดตั้ง — ลง skill พร้อม toolchain ทั้งหมดบนเครื่องใหม่ในคำสั่งเดียว
 
@@ -37,8 +56,8 @@ curl -fsSL https://raw.githubusercontent.com/PeerawitDeesamer/posn-pack/main/ins
 POSN_REPO=owner/repo bash <(curl -fsSL https://raw.githubusercontent.com/owner/repo/main/install.sh)
 ```
 
-รอ ~3-5 นาที (TinyTeX 50 MB + rclone 21 MB) เสร็จแล้วเปิด Claude Code สั่งได้เลย เช่น
-"สร้างข้อสอบเทียม ชุดที่ 6" — skill ชื่อ `posn` จะโหลดเอง
+รอ ~3-5 นาที (TinyTeX 50 MB + rclone 21 MB) เสร็จแล้วเปิด Claude Code สั่งได้เลย เช่น "สร้างข้อสอบเทียม ชุดที่ 6" หรือ
+"ขอพาร์ทคอมชุดที่ 2 แบบยาก เน้นเรื่องลูป" — skill ชื่อ `posn` จะโหลดเอง
 
 ## installer ทำอะไรบ้าง
 
@@ -50,7 +69,7 @@ POSN_REPO=owner/repo bash <(curl -fsSL https://raw.githubusercontent.com/owner/r
 | 3 | `tlmgr install` แพ็กเกจ LaTeX ที่ต้องใช้ (รวม `extsizes` สำหรับ `extarticle` 14pt) |
 | 4 | โหลดฟอนต์ TH Sarabun New 4 น้ำหนัก ลง fontconfig **และ** TEXMF tree |
 | 5 | ลง rclone ที่ `~/.local/bin/rclone` |
-| 6 | สร้าง `~/Downloads/POSN.Computer/{ไฟล์ข้อสอบ,ข้อสอบเทียม}` |
+| 6 | สร้าง `~/Downloads/POSN.Computer/` พร้อมโฟลเดอร์แยกตามพาร์ท |
 | 7 | คอมไพล์ไฟล์ทดสอบ แล้วเช็คด้วย `pdffonts` ว่าฝังครบทั้ง 4 น้ำหนัก |
 
 - รันซ้ำได้ ข้ามขั้นที่ทำไว้แล้วเอง
@@ -83,14 +102,19 @@ POSN_REPO=owner/repo bash <(curl -fsSL https://raw.githubusercontent.com/owner/r
 ## โครงสร้าง repo
 
 ```
-SKILL.md          กติกาการออกข้อสอบ+เฉลย, preamble LaTeX, checklist ก่อนส่งมอบ
+SKILL.md          สเปกข้อสอบ, กติกาการออกข้อสอบ+เฉลย, preamble LaTeX, checklist ก่อนส่งมอบ
 install.sh        ตัวติดตั้ง/ตรวจ
 pack.sh           แพ็ก skill (+PDF ถ้าสั่ง) เป็น tarball ไว้ขนแบบ offline
+docs/SPEC.md      แปลคำสั่งผู้ใช้เป็นสเปก ข้อความบนปก รหัสชุดวิชา
+docs/DIFFICULTY.md        เกณฑ์ความยาก 5 ระดับ วิธีเพิ่ม/ลดอย่างถูกวิธี
+docs/COMPUTER-PART.md     พาร์ทวิทยาการคำนวณ ขอบเขตไพธอน 9 หัวข้อ โครง verify.py
+docs/SUBJECTIVE.md        ตอนอัตนัยเติมคำตอบ แม่แบบ LaTeX และการตรวจ
 docs/INSTALL.md   ขั้นตอนย้ายเครื่อง + ตารางอาการพังที่เจอบ่อย
 docs/SETUP.md     ขั้นตอนติดตั้งแบบทำมือ ถ้า install.sh พัง
 docs/DRIVE.md     รายละเอียดการอัป Drive + วิธีที่ลองแล้วใช้ไม่ได้
 docs/TROUBLESHOOTING.md   error จริงที่เคยเจอและวิธีแก้
-scripts/check_answer_key.py    ตรวจตารางเฉลยกับตัวเลือกจริง
+scripts/exam_blueprint.py      สเปก -> พิมพ์เขียวรายข้อ + โควตาที่ต้องคุม
+scripts/check_answer_key.py    ตรวจตารางเฉลยกับตัวเลือกจริง (ปรนัย + อัตนัย)
 scripts/measure_font_size.py   วัดขนาดฟอนต์เทียบข้อสอบจริง
 ```
 

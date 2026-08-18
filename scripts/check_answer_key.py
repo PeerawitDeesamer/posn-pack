@@ -3,10 +3,15 @@
 
 usage: python3 check_answer_key.py exam.tex answer.tex
 
-ตรวจ 3 อย่าง
-  1. ตัวอักษรใน "ตารางเฉลย" ตรงกับตัวอักษรที่ \\ansline ของแต่ละข้อ
-  2. ค่าที่ \\ansline อ้าง ตรงกับตัวเลือกที่อยู่ในตำแหน่งนั้นของข้อสอบ
-  3. การกระจาย ก/ข/ค/ง สมดุลพอ
+รองรับทั้งข้อสอบปรนัยล้วน และข้อสอบผสม (ตอนที่ 1 ปรนัย + ตอนที่ 2 อัตนัยเติมคำตอบ)
+ข้อปรนัยดูจาก \\chfour/\\chtwo/\\chstack ข้ออัตนัยดูจาก \\fillbox ที่ไม่มีตัวเลือก
+
+ตรวจ 5 อย่าง
+  1. ตัวอักษร/ตัวเลขใน "ตารางเฉลย" ตรงกับที่ \\ansline ของแต่ละข้อ
+  2. ค่าที่ \\ansline อ้าง ตรงกับตัวเลือกที่อยู่ในตำแหน่งนั้นของข้อสอบ (เฉพาะข้อปรนัย)
+  3. การกระจาย ก/ข/ค/ง สมดุลพอ (นับเฉพาะข้อปรนัย)
+  4. คำตอบข้ออัตนัยเป็นจำนวนเต็ม 0-9999 ตามข้อกำหนดของ สอวน.
+  5. จำนวนข้อในข้อสอบ ตารางเฉลย และวิธีทำ ตรงกันทั้งสามแหล่ง
 
 ข้อที่คำตอบเป็นข้อความล้วน (ตรรกศาสตร์ ช่วง สูตร) สคริปต์จะข้ามและรายงานให้ไล่ดูเอง
 """
@@ -70,33 +75,48 @@ def nums(t):
 
 
 def parse_exam(path):
+    """คืนรายการข้อ ตามลำดับที่ปรากฏจริง
+
+    แต่ละข้อเป็น dict: {'kind': 'mcq'|'fill', 'choices': [4 ตัวเลือก] หรือ None}
+    รองรับหลาย environment ต่อไฟล์ (qlist = ตอนปรนัย, qlistb = ตอนอัตนัย)
+    """
     src = open(path, encoding='utf-8').read()
-    body = src.split(r'\begin{qlist}')[1].split(r'\end{qlist}')[0]
-    questions = re.split(r'\n\\item ', body)[1:]
     out = []
-    for q in questions:
-        ch = None
-        for cmd in ('chfour', 'chtwo', 'chstack'):
-            ch = brace_args(q, cmd)
-            if ch and len(ch) == 4:
-                break
-        out.append(ch)
+    for env in ('qlist', 'qlistb'):
+        chunks = src.split('\\begin{' + env + '}')[1:]
+        for chunk in chunks:
+            body = chunk.split('\\end{' + env + '}')[0]
+            for q in re.split(r'\n\\item ', body)[1:]:
+                ch = None
+                for cmd in ('chfour', 'chtwo', 'chstack'):
+                    ch = brace_args(q, cmd)
+                    if ch and len(ch) == 4:
+                        break
+                    ch = None
+                if ch:
+                    out.append({'kind': 'mcq', 'choices': ch})
+                else:
+                    out.append({'kind': 'fill', 'choices': None})
     return out
 
 
 def parse_key_table(src):
-    """อ่านตัวอักษรคำตอบจากตาราง \\textbf{ตอบ} & ก & ข & ..."""
-    letters = []
+    """อ่านช่องคำตอบจากตาราง \\textbf{ตอบ} & ก & ข & ... (หรือ & 45 & 128 & ...)
+
+    ข้ออัตนัยใส่ตัวเลขในช่องแทนตัวอักษร จึงรับทั้งสองแบบ
+    """
+    cells = []
     for row in re.findall(r'\\textbf\{ตอบ\}([^\\\n]*(?:\\\\)?)', src):
         for cell in row.split('&')[1:]:
             cell = cell.replace('\\\\', '').replace('\\hline', '').strip()
-            if cell in LETTERS:
-                letters.append(cell)
-    return letters
+            cell = cell.replace('$', '').replace('{,}', '').strip()
+            if cell in LETTERS or re.fullmatch(r'-?\d+', cell):
+                cells.append(cell)
+    return cells
 
 
 def parse_anslines(src):
-    """อ่าน \\ansline{<ตัวอักษร>.\\ <ค่า>}{} ของแต่ละข้อ"""
+    """อ่าน \\ansline{<ตัวอักษร>.\\ <ค่า>}{} หรือ \\ansline{<ตัวเลข>}{} ของแต่ละข้อ"""
     out = []
     for m in re.finditer(r'\\ansline\{', src):
         args = brace_args(src[m.start():], 'ansline', count=1)
@@ -104,9 +124,59 @@ def parse_anslines(src):
             continue
         a = args[0].strip()
         letter = a[0] if a[:1] in LETTERS else None
-        value = a[1:].lstrip('.').replace('\\ ', ' ').strip()
+        value = (a[1:].lstrip('.') if letter else a).replace('\\ ', ' ').strip()
         out.append((letter, value))
     return out
+
+
+def check_mcq(q, item, tbl, ansline, problems, skipped):
+    ch = item['choices']
+    tbl_letter, (ans_letter, ans_value) = tbl, ansline
+    if tbl_letter not in LETTERS:
+        problems.append((q, f'ข้อปรนัยแต่ตารางเฉลยใส่ "{tbl_letter}" ไม่ใช่ ก/ข/ค/ง'))
+        return
+    if ans_letter != tbl_letter:
+        problems.append((q, f'ตาราง={tbl_letter} แต่วิธีทำ={ans_letter}'))
+        return
+
+    pos = LETTERS.index(tbl_letter)
+    want = nums(ans_value)
+    got = nums(ch[pos])
+    if not want:
+        skipped.append(q)              # คำตอบเป็นข้อความล้วน ตรวจอัตโนมัติไม่ได้
+        return
+    if want != got:
+        problems.append(
+            (q, f'ตอบ {tbl_letter} อ้างค่า {want} แต่ตัวเลือก {tbl_letter} คือ {got}'))
+        return
+    twins = [LETTERS[j] for j in range(4) if j != pos and nums(ch[j]) == want]
+    if twins:
+        skipped.append(q)              # ตัวเลือกอื่นมีตัวเลขชุดเดียวกัน แยกด้วยเลขไม่ได้
+        print(f'  ~ ข้อ {q}: ตัวเลือก {"/".join(twins)} มีตัวเลขชุดเดียวกัน ต้องดูข้อความเอง')
+
+
+def check_fill(q, tbl, ansline, problems):
+    """ข้ออัตนัย: ตารางกับวิธีทำต้องตรงกัน และต้องเป็นจำนวนเต็ม 0-9999"""
+    ans_letter, ans_value = ansline
+    if ans_letter is not None:
+        problems.append((q, 'ข้ออัตนัยแต่วิธีทำขึ้นต้นด้วยตัวเลือก ก/ข/ค/ง'))
+        return
+    want = nums(ans_value)
+    if not want:
+        problems.append((q, f'ข้ออัตนัยต้องตอบเป็นตัวเลข แต่ \\ansline คือ "{ans_value}"'))
+        return
+    if len(want) > 1:
+        problems.append((q, f'ข้ออัตนัยต้องมีคำตอบเดียว แต่พบ {want}'))
+        return
+    v = want[0]
+    if '/' in v:
+        problems.append((q, f'ข้ออัตนัยตอบเศษส่วน {v} ไม่ได้ ต้องเป็นจำนวนเต็ม'))
+        return
+    if not (0 <= int(v) <= 9999):
+        problems.append((q, f'คำตอบ {v} อยู่นอกช่วงจำนวนเต็มไม่เกิน 4 หลัก (0-9999)'))
+        return
+    if nums(tbl) != want:
+        problems.append((q, f'ตาราง={nums(tbl)} แต่วิธีทำ={want}'))
 
 
 def main():
@@ -114,13 +184,16 @@ def main():
         print(__doc__)
         sys.exit(2)
     exam_path, ans_path = sys.argv[1], sys.argv[2]
-    choices = parse_exam(exam_path)
+    items = parse_exam(exam_path)
     ans_src = open(ans_path, encoding='utf-8').read()
     table = parse_key_table(ans_src)
     anslines = parse_anslines(ans_src)
 
-    n = len(choices)
-    print(f'ข้อสอบ {n} ข้อ | ตารางเฉลย {len(table)} ช่อง | วิธีทำ {len(anslines)} ข้อ')
+    n = len(items)
+    n_mcq = sum(1 for it in items if it['kind'] == 'mcq')
+    n_fill = n - n_mcq
+    print(f'ข้อสอบ {n} ข้อ (ปรนัย {n_mcq} / อัตนัย {n_fill}) | '
+          f'ตารางเฉลย {len(table)} ช่อง | วิธีทำ {len(anslines)} ข้อ')
     problems, skipped = [], []
 
     if not (n == len(table) == len(anslines)):
@@ -128,36 +201,20 @@ def main():
 
     for i in range(min(n, len(table), len(anslines))):
         q = i + 1
-        ch = choices[i]
-        tbl_letter = table[i]
-        ans_letter, ans_value = anslines[i]
+        item = items[i]
+        if item['kind'] == 'mcq':
+            if item['choices'] is None or len(item['choices']) != 4:
+                problems.append((q, 'อ่านตัวเลือกไม่ได้ (macro ผิดรูป?)'))
+                continue
+            check_mcq(q, item, table[i], anslines[i], problems, skipped)
+        else:
+            check_fill(q, table[i], anslines[i], problems)
 
-        if ch is None or len(ch) != 4:
-            problems.append((q, 'อ่านตัวเลือกไม่ได้ (macro ผิดรูป?)'))
-            continue
-        if ans_letter != tbl_letter:
-            problems.append((q, f'ตาราง={tbl_letter} แต่วิธีทำ={ans_letter}'))
-            continue
-
-        pos = LETTERS.index(tbl_letter)
-        want = nums(ans_value)
-        got = nums(ch[pos])
-        if not want:
-            skipped.append(q)          # คำตอบเป็นข้อความล้วน ตรวจอัตโนมัติไม่ได้
-            continue
-        if want != got:
-            problems.append(
-                (q, f'ตอบ {tbl_letter} อ้างค่า {want} แต่ตัวเลือก {tbl_letter} คือ {got}'))
-            continue
-        twins = [LETTERS[j] for j in range(4) if j != pos and nums(ch[j]) == want]
-        if twins:
-            skipped.append(q)          # ตัวเลือกอื่นมีตัวเลขชุดเดียวกัน แยกด้วยเลขไม่ได้
-            print(f'  ~ ข้อ {q}: ตัวเลือก {"/".join(twins)} มีตัวเลขชุดเดียวกัน ต้องดูข้อความเอง')
-
-    dist = Counter(table)
-    print('การกระจายคำตอบ:', ' '.join(f'{L}={dist.get(L, 0)}' for L in LETTERS))
-    if dist and max(dist.values()) - min(dist.get(L, 0) for L in LETTERS) > 6:
-        print('  ! เอียงเกินไป ควรสลับตำแหน่งตัวเลือกบางข้อ')
+    dist = Counter(t for t in table if t in LETTERS)
+    if dist:
+        print('การกระจายคำตอบปรนัย:', ' '.join(f'{L}={dist.get(L, 0)}' for L in LETTERS))
+        if max(dist.values()) - min(dist.get(L, 0) for L in LETTERS) > 6:
+            print('  ! เอียงเกินไป ควรสลับตำแหน่งตัวเลือกบางข้อ')
 
     if skipped:
         print(f'ข้ามการตรวจอัตโนมัติ {len(skipped)} ข้อ (คำตอบเป็นข้อความ) '

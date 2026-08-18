@@ -7,12 +7,12 @@
 #   bash install.sh --no-rclone  # skip Google Drive tooling
 #
 # Also runs straight off GitHub with no checkout:
-#   curl -fsSL https://raw.githubusercontent.com/PeerawitDeesamer/posn-pack/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/OWNER/REPO/main/install.sh | bash
 set -uo pipefail
 
 # ---- EDIT THIS after creating the GitHub repo -------------------------------
 # Used only for the curl-pipe path above, to fetch the rest of the files.
-DEFAULT_REPO="PeerawitDeesamer/posn-pack"
+DEFAULT_REPO="YOUR-GITHUB-USERNAME/posn-pack"
 # -----------------------------------------------------------------------------
 
 SELF="${BASH_SOURCE[0]:-}"
@@ -130,13 +130,13 @@ TEXBIN="$(texbin)"
 # extsizes = extarticle 14pt; lastpage/needspace/fancyhdr/pgf used by the templates.
 TL_PKGS="xetex fontspec geometry amsmath amsfonts enumitem multicol graphics pgf
   fancyhdr array xkeyval etoolbox unicode-math l3packages l3kernel euenc ucharcat
-  realscripts extsizes lastpage needspace"
+  realscripts extsizes lastpage needspace fancyvrb"
 
 step "3. LaTeX packages"
 if ! command -v xelatex >/dev/null; then
   miss "skipped — no xelatex"
 elif [ "$CHECK_ONLY" = 1 ]; then
-  for p in extsizes lastpage needspace fontspec; do
+  for p in extsizes lastpage needspace fontspec fancyvrb; do
     kpsewhich "$p.sty" >/dev/null 2>&1 && ok "$p" || miss "$p"
   done
 else
@@ -230,8 +230,12 @@ step "6. Work directory"
 if [ "$CHECK_ONLY" = 1 ]; then
   [ -d "$WORK_DIR/ข้อสอบเทียม" ] && ok "$WORK_DIR" || miss "$WORK_DIR missing"
 else
-  mkdir -p "$WORK_DIR/ข้อสอบเทียม" "$WORK_DIR/ไฟล์ข้อสอบ"
-  ok "$WORK_DIR/{ข้อสอบเทียม,ไฟล์ข้อสอบ}"
+  # one folder per exam part — set numbers are counted per part
+  mkdir -p "$WORK_DIR/ไฟล์ข้อสอบ" \
+           "$WORK_DIR/ข้อสอบเทียม/พาร์ทคณิตศาสตร์" \
+           "$WORK_DIR/ข้อสอบเทียม/พาร์ทคอมพิวเตอร์" \
+           "$WORK_DIR/ข้อสอบเทียม/ฉบับเต็ม"
+  ok "$WORK_DIR/{ไฟล์ข้อสอบ,ข้อสอบเทียม/{พาร์ทคณิตศาสตร์,พาร์ทคอมพิวเตอร์,ฉบับเต็ม}}"
 fi
 # Reference PDFs are the user's own data — never downloadable, must be copied over.
 n_real=$(ls "$WORK_DIR/ไฟล์ข้อสอบ/"ข้อสอบสอวนคอมปี*.pdf 2>/dev/null | wc -l)
@@ -239,7 +243,7 @@ n_real=$(ls "$WORK_DIR/ไฟล์ข้อสอบ/"ข้อสอบสอ�
   || miss "no ข้อสอบสอวนคอมปี*.pdf in $WORK_DIR/ไฟล์ข้อสอบ/ — copy from the old machine or Drive"
 [ -f "$WORK_DIR/ไฟล์ข้อสอบ/เนื้อหาที่ใช้สอบ.pdf" ] && ok "reference: เนื้อหาที่ใช้สอบ.pdf" \
   || miss "missing $WORK_DIR/ไฟล์ข้อสอบ/เนื้อหาที่ใช้สอบ.pdf — copy from the old machine or Drive"
-n_prev=$(ls "$WORK_DIR/ข้อสอบเทียม/"*.pdf 2>/dev/null | wc -l)
+n_prev=$(find "$WORK_DIR/ข้อสอบเทียม" -name '*.pdf' 2>/dev/null | wc -l)
 [ "$n_prev" -gt 0 ] && ok "previous mock sets: $n_prev PDF(s)" \
   || miss "no previous mock sets — copy ข้อสอบเทียม/ over to avoid repeating questions"
 
@@ -252,11 +256,18 @@ else
   cat > "$tmp/smoke.tex" <<'TEX'
 \documentclass[14pt]{extarticle}
 \usepackage{fontspec}\usepackage{amsmath}\usepackage{lastpage}\usepackage{needspace}
+\usepackage{fancyvrb}
+\DefineVerbatimEnvironment{pycode}{Verbatim}{fontsize=\small, xleftmargin=2.4em}
 \setmainfont{THSarabunNew}[Extension=.ttf, UprightFont=*, BoldFont=* Bold,
   ItalicFont=* Italic, BoldItalicFont=* BoldItalic, Scale=1.112]
 \XeTeXlinebreaklocale "th"
 \begin{document}
 ทดสอบ abc \textbf{หนา} \textit{เอียง} \textbf{\textit{หนาเอียง}} $\binom{8}{3}=56$
+\begin{pycode}
+x = 2
+while x < 20:
+    x = x + 5
+\end{pycode}
 \end{document}
 TEX
   ( cd "$tmp" && xelatex -interaction=nonstopmode smoke.tex >/dev/null 2>&1 )
