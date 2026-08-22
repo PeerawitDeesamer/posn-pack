@@ -49,7 +49,8 @@ S=~/.claude/skills/posn; mkdir -p <scratchpad>/exam && cd <scratchpad>/exam
 
 python3 $S/scripts/exam_blueprint.py --part comp --format mixed \
         --difficulty hard --focus pyloop --count 30 --set 2 --json    # 0. พิมพ์เขียว
-cat ~/Documents/POSN.Computer/index.jsonl        # 1. กันโจทย์ซ้ำ ห้ามเปิด PDF ชุดเก่า
+python3 $S/scripts/next_set.py comp              # 1. เลขชุดว่างจริง (ดู Drive ด้วย)
+cat ~/Documents/POSN.Computer/index.jsonl        #    กันโจทย์ซ้ำ ห้ามเปิด PDF ชุดเก่า
 cp $S/assets/*.tex ./ && python3 verify.py       # 2. คำตอบ + ตัวลวง → verify_out.json
                                                  # 3. เขียน exam2.tex answer2.tex ideas.json
 for f in exam2 answer2; do xelatex -interaction=nonstopmode $f; xelatex -interaction=nonstopmode $f; done
@@ -71,7 +72,7 @@ python3 $S/scripts/exam_index.py add comp 2 --ideas ideas.json
 | ความยาก | `easy` / `standard` / `hard` / `brutal` | `standard` (เท่าข้อสอบจริง) |
 | เรื่องที่เน้น | รหัสหัวข้อ คั่นด้วย `,` | ไม่เน้น = กระจายตามน้ำหนัก |
 | จำนวนข้อ | ตัวเลข | คณิต 50 / คอม 30 / ทั้งฉบับ 60 (โครงปี 68) |
-| เลขชุด | ตัวเลข | เลขถัดจากชุดล่าสุด — **`ls` โฟลเดอร์พาร์ทนั้นก่อน อย่าเดา** |
+| เลขชุด | ตัวเลข | **ต้องรัน `next_set.py <part>` เท่านั้น อย่าเดา อย่า `ls` เอาเอง** |
 
 `--list` = รหัสหัวข้อ ระดับ พรีเซ็ต โครงข้อสอบจริงรายปี ผลที่ได้คือตาราง **ข้อที่ / หัวข้อ /
 ระดับ / รูปแบบ** + โควตา + เวลา + ชื่อไฟล์ + รหัสชุดวิชา — ก๊อปไปวางเป็นคอมเมนต์หัว
@@ -190,8 +191,8 @@ emit(R, D, 'comp', 2)                                         # บรรทั�
 python3 ~/.claude/skills/posn/scripts/preflight.py <part> <set>    # รันในโฟลเดอร์งาน
 ```
 
-ตรวจ 11 รายการในคำสั่งเดียว (verify + ตัวลวง + ตารางเฉลย + การกระจาย + การเรียงตัวเลือก +
-ระดับเทียบพิมพ์เขียว + ขนาดฟอนต์ + log + ขอบเขตไพธอน + ไอเดียซ้ำ) **เจอ FAIL ข้อไหนมันหยุดทันที** แก้แล้วรันใหม่ ห้ามส่งมอบโดยที่ยังไม่ผ่านครบ
+ตรวจ 12 รายการในคำสั่งเดียว (verify + ตัวลวง + ตารางเฉลย + การกระจาย + การเรียงตัวเลือก +
+ระดับเทียบพิมพ์เขียว + ขนาดฟอนต์ + log + ขอบเขตไพธอน + ไอเดียซ้ำ + เลขชุดไม่ทับบน Drive) **เจอ FAIL ข้อไหนมันหยุดทันที** แก้แล้วรันใหม่ ห้ามส่งมอบโดยที่ยังไม่ผ่านครบ
 ท้าย output มันพิมพ์ **รายชื่อหน้าที่ต้องเปิดดูด้วยตา** (หน้าที่มี `\chstack` `pycode`
 `tikzpicture` + หน้าแรก + หน้าสุดท้าย) — **ห้าม render หน้าอื่นโดยไม่มีเหตุผล** ชุด 50 ข้อ +
 เฉลย 40 หน้าคือการอ่านภาพ 50+ ภาพเข้า context ซึ่งแพงที่สุดในไปป์ไลน์ และแพงโดยไม่ได้
@@ -217,7 +218,9 @@ python3 ~/.claude/skills/posn/scripts/preflight.py <part> <set>    # รัน�
 ```
 
 ไม่มีช่องว่างหลัง "ชุดที่" (ชุดที่1 ไม่ใช่ ชุดที่ 1) `exam_blueprint.py` พิมพ์ path เต็มให้แล้ว
-**เลขชุดนับแยกตามพาร์ท** (คณิตชุด 8 กับคอมชุด 2 อยู่ด้วยกันได้) · `.tex` `verify.py`
+**เลขชุดนับแยกตามพาร์ท** และ **โฟลเดอร์ในเครื่องไม่ใช่บันทึกที่ครบ** ชุดที่ส่งมอบแล้วอยู่บน
+Drive เสมอ แต่ในเครื่องอาจถูกลบ ตั้งเลขจากที่เห็นในเครื่องอย่างเดียว = ทับงานเก่า
+ให้ `next_set.py` ตอบเท่านั้น (preflight ตรวจซ้ำอีกชั้น) · `.tex` `verify.py`
 `ideas.json` เก็บใน scratchpad ของ session · `blueprints/` `results/` `index.jsonl`
 เป็นข้อมูลส่วนตัวของผู้ใช้ **ห้าม commit ขึ้น repo**
 
@@ -247,4 +250,4 @@ python3 ~/.claude/skills/posn/scripts/preflight.py <part> <set>    # รัน�
 [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) error ที่เคยเจอจริง
 
 `scripts/` — `exam_blueprint.py` พิมพ์เขียว · `verify_lib.py` ตรวจตัวลวง · `check_answer_key.py` ตารางเฉลย ·
-`measure_font_size.py` ขนาดฟอนต์ · `exam_index.py` ดัชนีโจทย์ · `exam_result.py` ผลสอบ · `preflight.py` รวมทุกการตรวจ
+`measure_font_size.py` ขนาดฟอนต์ · `exam_index.py` ดัชนีโจทย์ · `exam_result.py` ผลสอบ · `next_set.py` เลขชุดว่าง · `preflight.py` รวมทุกการตรวจ

@@ -34,6 +34,7 @@ pack.sh           แพ็กไปเครื่องใหม่
 | `measure_font_size.py` | ขนาดฟอนต์เทียบข้อสอบจริง (PyMuPDF) |
 | `exam_index.py` | ดัชนีไอเดียโจทย์ กันโจทย์ซ้ำโดยไม่ต้องเปิด PDF ชุดเก่า |
 | `exam_result.py` | บันทึกและสรุปผลสอบของผู้ใช้ |
+| `next_set.py` | หาเลขชุดว่างจริง โดยดูทั้งในเครื่องและบน Drive |
 | `preflight.py` | รวมทุกการตรวจไว้ในคำสั่งเดียว + ชี้หน้าที่ต้องดูด้วยตา |
 | `render_pages.py` | แปลงเฉพาะหน้าที่เสี่ยงเป็น PNG |
 
@@ -47,7 +48,8 @@ pack.sh           แพ็กไปเครื่องใหม่
 ## ไปป์ไลน์
 
 ```
-สเปก → exam_blueprint.py --json → อ่าน index.jsonl กันซ้ำ → verify.py (คำตอบ + ตัวลวง)
+สเปก → next_set.py (เลขชุดว่างจริง) → exam_blueprint.py --json → อ่าน index.jsonl กันซ้ำ
+     → verify.py (คำตอบ + ตัวลวง)
      → เขียน .tex → xelatex 2 รอบ → preflight.py → ดูภาพเฉพาะหน้าที่มันชี้
      → ส่งมอบ + rclone → exam_index.py add
 ```

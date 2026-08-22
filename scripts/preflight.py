@@ -199,6 +199,43 @@ def check_scope(ctx):
     return True, f'โค้ด {len(code.split())} โทเคน อยู่ในขอบเขตทั้งหมด'
 
 
+def check_set_free(ctx):
+    """อัปขึ้น Drive แล้วจะไปทับไฟล์ของชุดอื่นไหม
+
+    โฟลเดอร์ในเครื่องไม่ใช่บันทึกที่ครบ เคยเกิดขึ้นจริงว่าในเครื่องมีพาร์ทคอมแค่ชุดที่ 2
+    แต่บน Drive มี 1-4 ครบ พอตั้งเลขจากที่เห็นในเครื่องจึงได้ 3 ซึ่งชนของจริง
+    และ `rclone copy` เขียนทับให้เงียบ ๆ โดยไม่เตือน
+
+    ถ้าชื่อไฟล์ปลายทางมีอยู่แล้วแต่ **ขนาดตรงกับของเราเป๊ะ** แปลว่าเป็นไฟล์ที่เราอัปไปเอง
+    (รัน preflight ซ้ำหลังส่งมอบ) ไม่ใช่การทับงานคนอื่น จึงผ่านได้
+    """
+    import next_set as ns          # ใช้กติกาตั้งชื่อไฟล์ชุดเดียวกัน ไม่เขียนซ้ำ
+    if not ns.RCLONE.exists():
+        raise Stop(f'ไม่มี rclone ที่ {ns.RCLONE} — ตรวจไม่ได้ว่าจะทับของบน Drive ไหม')
+    target = (f'ข้อสอบเทียม_สอวนคอมพิวเตอร์_'
+              f'{ns.TAG[ctx["part"]]}{ctx["set"]}.pdf')
+    # rclone เขียน NOTICE ลง stderr — ต้องอ่านเฉพาะ stdout ไม่งั้น JSON พัง
+    proc = subprocess.run([str(ns.RCLONE), 'lsjson',
+                           f'{ns.REMOTE}/{ns.FOLDER[ctx["part"]]}'],
+                          capture_output=True, text=True)
+    if proc.returncode != 0:
+        raise Stop('เรียก Drive ไม่ได้ จึงตรวจไม่ได้ว่าเลขชุดนี้ทับของเดิมไหม')
+    try:
+        listing = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        raise Stop('อ่านรายการไฟล์บน Drive ไม่ได้')
+
+    hit = next((f for f in listing if f['Name'] == target), None)
+    if hit is None:
+        return True, f'ชุดที่ {ctx["set"]} ยังไม่มีบน Drive'
+    mine = ctx['exam_pdf'].stat().st_size
+    if hit['Size'] == mine:
+        return True, f'ชุดที่ {ctx["set"]} บน Drive คือไฟล์เดียวกับของเรา (อัปแล้ว)'
+    return False, (f'ชุดที่ {ctx["set"]} มีอยู่บน Drive แล้วและเป็นคนละไฟล์ '
+                   f'({hit["Size"]} ไบต์ ของเรา {mine}) — อัปแล้วจะทับของเดิมหาย '
+                   f'เปลี่ยนเลขชุดด้วย next_set.py')
+
+
 def check_index(ctx):
     code, out = run([sys.executable, str(SCRIPTS / 'exam_index.py'), 'check',
                      ctx['part'], str(ctx['set']), '--ideas', str(ctx['ideas_path'])])
@@ -220,6 +257,7 @@ CHECKS = [
     ('ไม่มี ^! ใน log', check_log),
     ('ไวยากรณ์อยู่ในขอบเขตพาร์ทคอม', check_scope),
     ('ไอเดียไม่ซ้ำกับ index.jsonl', check_index),
+    ('เลขชุดไม่ทับของบน Drive', check_set_free),
 ]
 
 
