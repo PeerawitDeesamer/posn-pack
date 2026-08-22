@@ -18,3 +18,4 @@ verify_out.json
 # ของที่ Python สร้างเอง
 __pycache__/
 *.pyc
+.DS_Store
