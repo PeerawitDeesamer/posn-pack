@@ -28,17 +28,17 @@ installer ทำให้ทั้งหมดนี้ ข้ามขั้น
 | ขั้น | ทำอะไร |
 |---|---|
 | 0 | ก๊อป skill ไป `~/.claude/skills/posn` |
-| 1 | เช็ค `curl` `python3` `perl` `poppler-utils` |
+| 1 | เช็ค `curl` `python3` `perl` `PyMuPDF` |
 | 2 | ลง TinyTeX ที่ `~/.TinyTeX` (ตรวจ arch เอง) |
 | 3 | `tlmgr install` แพ็กเกจ LaTeX ที่ต้องใช้ (รวม `extsizes`) |
 | 4 | โหลดฟอนต์ TH Sarabun New 4 น้ำหนัก ลง **2 ที่** (ดูด้านล่าง) |
 | 5 | ลง rclone ที่ `~/.local/bin/rclone` |
-| 6 | สร้าง `~/Downloads/POSN.Computer/{ไฟล์ข้อสอบ,ข้อสอบเทียม}` |
+| 6 | สร้าง `~/Documents/POSN.Computer/{ไฟล์ข้อสอบ,ข้อสอบเทียม}` |
 | 7 | คอมไพล์ไฟล์ทดสอบ แล้วเช็คด้วย `pdffonts` ว่าฝังครบทั้ง 4 น้ำหนัก |
 
 รองรับ Linux (x86_64 / aarch64) และ macOS (arm64 / x86_64) ลงในโฮมทั้งหมด ไม่ใช้ sudo
-ยกเว้น `poppler-utils` ที่ต้องลงระดับระบบ (`apt install poppler-utils` /
-`brew install poppler`) — ไม่มีก็ยังคอมไพล์ได้ แต่วัดขนาดฟอนต์และดูภาพหน้าไม่ได้
+`PyMuPDF` ลงด้วย pip ระดับผู้ใช้ (`install.sh` ลงให้เอง) ไม่ต้องใช้ sudo
+ไม่มีก็ยังคอมไพล์ได้ แต่ `preflight.py` จะวัดขนาดฟอนต์และชี้หน้าที่ต้องดูไม่ได้
 
 **ทำไมฟอนต์ต้องลง 2 ที่**
 

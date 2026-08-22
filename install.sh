@@ -41,7 +41,7 @@ if [ -z "$SRC_DIR" ] || [ ! -f "$SRC_DIR/SKILL.md" ]; then
 fi
 SKILL_DIR="$HOME/.claude/skills/posn"
 FONT_DIR="$HOME/.local/share/fonts/thsarabunnew"
-WORK_DIR="$HOME/Downloads/POSN.Computer"
+WORK_DIR="$HOME/Documents/POSN.Computer"
 BIN_DIR="$HOME/.local/bin"
 
 CHECK_ONLY=0
@@ -85,7 +85,7 @@ if [ "$SRC_DIR" != "$SKILL_DIR" ]; then
     [ -f "$SKILL_DIR/SKILL.md" ] && ok "installed at $SKILL_DIR" || miss "not installed at $SKILL_DIR"
   else
     mkdir -p "$SKILL_DIR"
-    cp -R "$SRC_DIR"/SKILL.md "$SRC_DIR"/install.sh "$SRC_DIR"/docs "$SRC_DIR"/scripts "$SKILL_DIR"/
+    cp -R "$SRC_DIR"/SKILL.md "$SRC_DIR"/install.sh "$SRC_DIR"/docs "$SRC_DIR"/scripts "$SRC_DIR"/assets "$SKILL_DIR"/
     [ -f "$SRC_DIR/pack.sh" ] && cp "$SRC_DIR/pack.sh" "$SKILL_DIR"/
     ok "copied skill to $SKILL_DIR"
   fi
@@ -93,17 +93,26 @@ else
   ok "running from $SKILL_DIR"
 fi
 
+# assets/ ถูกเพิ่มทีหลัง — เครื่องที่ติดตั้งไว้ก่อนหน้าจะไม่มี ต้องเช็คแยก
+for d in assets scripts docs; do
+  [ -d "$SKILL_DIR/$d" ] && ok "$d/" || miss "$SKILL_DIR/$d missing — rerun install.sh without --check"
+done
+
 # ---------------------------------------------------------------- 1. prerequisites
 step "1. System prerequisites"
 for c in curl python3 perl; do
   command -v "$c" >/dev/null && ok "$c" || die "$c missing — install it first (TinyTeX needs perl, scripts need python3)"
 done
-if command -v pdftotext >/dev/null && command -v pdftoppm >/dev/null; then
-  ok "poppler-utils (pdftotext/pdftoppm/pdffonts)"
+# PyMuPDF อ่านขนาดฟอนต์จริงและ render หน้าเป็น PNG ได้ในตัวเดียว — ใช้แทน poppler
+# ซึ่งลงยากบนเครื่องที่ไม่มี package manager (macOS ที่ไม่มี brew, ไม่มี passwordless sudo)
+if python3 -c "import pymupdf" 2>/dev/null; then
+  ok "PyMuPDF (วัดขนาดฟอนต์ + render หน้า)"
+elif [ "$CHECK_ONLY" = 1 ]; then
+  miss "PyMuPDF missing — preflight.py จะวัดขนาดฟอนต์และชี้หน้าที่ต้องดูไม่ได้"
 else
-  miss "poppler-utils missing — font measuring and page previews will not work"
-  echo "       Debian/Ubuntu: sudo apt install poppler-utils"
-  echo "       macOS:         brew install poppler"
+  python3 -m pip install --user --quiet pymupdf \
+    && ok "installed PyMuPDF" \
+    || miss "pip install pymupdf failed — ลงเองด้วย: python3 -m pip install --user pymupdf"
 fi
 
 # ---------------------------------------------------------------- 2. TinyTeX

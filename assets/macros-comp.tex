@@ -1,0 +1,39 @@
+% macro เพิ่มเมื่อชุดนั้นมีพาร์ทคอมพิวเตอร์ หรือมีตอนอัตนัยเติมคำตอบ
+% วางไว้หลัง \input{preamble-exam} ด้วย \input{macros-comp}
+
+\usepackage{fancyvrb}
+
+\newcommand{\code}[1]{\texttt{\small #1}}          % โค้ดสั้นในบรรทัด
+\DefineVerbatimEnvironment{pycode}{Verbatim}%      % บล็อกโค้ดไพธอน
+  {fontsize=\small, xleftmargin=2.4em, baselinestretch=0.95}
+% โค้ดต้องอยู่ใน Verbatim เท่านั้น — \texttt หรือ \verb ธรรมดาจะโดน
+% \XeTeXlinebreaklocale "th" ยุบช่องว่างนำหน้าบรรทัดทิ้ง การเยื้องของไพธอนหายหมด
+% ระดับการเยื้องคือความหมายของโปรแกรม เยื้องเพี้ยน = โจทย์ผิด
+% preflight.py จะชี้ให้เปิดดูภาพหน้าที่มี pycode ทุกครั้ง ต้องดูจริง
+%
+% \small เพราะฟอนต์ monospace ที่ขนาดเดียวกับ TH Sarabun New จะดูใหญ่เกินสัดส่วน
+% ข้อสอบจริงพิมพ์โค้ดเล็กกว่าเนื้อความประมาณ 1 สเต็ป
+
+% ---------------------------------------------------------------- ตอนอัตนัย
+
+\newlist{qlistb}{enumerate}{1}
+\setlist[qlistb]{label=\arabic*., leftmargin=1.5em, itemsep=10pt, topsep=6pt,
+                 start=26}
+% ต้องใช้ชื่อ qlistb เท่านั้น — check_answer_key.py แยกตอนปรนัยกับตอนอัตนัยจากชื่อนี้
+% ถ้าใช้ enumerate ธรรมดา สคริปต์จะมองไม่เห็นข้อพวกนั้นเลย
+%
+% start= ต้องตรงกับเลขข้อแรกจริงของตอนนี้ ถ้าจำนวนข้อของตอนที่ 1 เปลี่ยน ต้องแก้ตามด้วย
+% ไม่งั้นเลขข้อในข้อสอบกับในเฉลยจะเหลื่อมกัน
+%
+% วิธีเปลี่ยนเลขข้อแรก: เขียน \begin{qlistb}[start=9] ที่ตัวข้อสอบ
+% **ห้ามเรียก \setlist[qlistb]{start=9} ซ้ำในไฟล์ข้อสอบ** เพราะ enumitem จะ *ทับ*
+% key ทั้งชุดที่ตั้งไว้ที่นี่ รวมทั้ง label= ทำให้ขึ้น "Undefined label" ตอนคอมไพล์
+
+\newcommand{\fillbox}{\par\vspace{4pt}\noindent\hspace*{2.2em}%
+  ตอบ~\dotfill\hspace*{2em}\par\vspace{2pt}}
+% ข้ออัตนัยต้องมีแค่ \fillbox ห้ามมี macro ตัวเลือกติดมาด้วย ไม่งั้นสคริปต์จะจัดเป็นข้อปรนัย
+
+\newcommand{\sectionhead}[3]{\par\vspace{10pt}\noindent%
+  \textbf{#1}\hfill\textbf{#2}\hfill\textbf{#3}\par\vspace{2pt}\hrule\vspace{6pt}}
+
+% ข้ออัตนัยใช้ \Needspace{6\baselineskip} (มากกว่าปรนัย) กันช่อง "ตอบ" หลุดคนละหน้ากับโจทย์

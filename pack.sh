@@ -3,12 +3,12 @@
 # tarball to carry to another machine.
 #
 #   bash pack.sh              # skill only, ~90 KB
-#   bash pack.sh --with-pdfs  # skill + ~/Downloads/POSN.Computer PDFs (large)
+#   bash pack.sh --with-pdfs  # skill + ~/Documents/POSN.Computer PDFs (large)
 #   bash pack.sh --out DIR    # where to write the tarball (default: ~/Downloads)
 set -euo pipefail
 
 SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="$HOME/Downloads/POSN.Computer"
+WORK_DIR="$HOME/Documents/POSN.Computer"
 OUT_DIR="$HOME/Downloads"
 WITH_PDFS=0
 
@@ -27,7 +27,7 @@ trap 'rm -rf "$STAGE"' EXIT
 ROOT="$STAGE/posn-skill"
 mkdir -p "$ROOT/skill"
 
-cp -R "$SRC_DIR"/SKILL.md "$SRC_DIR"/install.sh "$SRC_DIR"/pack.sh \
+cp -R "$SRC_DIR"/SKILL.md "$SRC_DIR"/install.sh "$SRC_DIR"/pack.sh "$SRC_DIR"/assets \
       "$SRC_DIR"/docs "$SRC_DIR"/scripts "$ROOT/skill"/
 
 if [ "$WITH_PDFS" = 1 ] && [ -d "$WORK_DIR" ]; then
@@ -51,8 +51,8 @@ TH Sarabun New, and rclone under $HOME (no sudo).
 
 If this bundle has a POSN.Computer/ folder, copy it over too:
 
-    mkdir -p ~/Downloads/POSN.Computer
-    cp -R POSN.Computer/* ~/Downloads/POSN.Computer/
+    mkdir -p ~/Documents/POSN.Computer
+    cp -R POSN.Computer/* ~/Documents/POSN.Computer/
 
 Google Drive needs a browser login once, on the new machine:
 

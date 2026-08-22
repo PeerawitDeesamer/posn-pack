@@ -19,7 +19,7 @@ fc-list | grep -i "sarabun new"
 - ไม่มี LaTeX ระดับระบบ ไม่มี pandoc/typst/weasyprint
 - Python 3.14 มีแต่ stdlib (ไม่มี numpy/sympy/reportlab/matplotlib) — ใช้ `fractions`,
   `itertools`, `math`, `collections` ให้พอ อย่าไปติดตั้ง package เพิ่มโดยไม่จำเป็น
-- มี `pdftotext`, `pdffonts`, `pdftoppm`, `pdfinfo` (poppler-utils) ใช้ได้เลย
+- มี PyMuPDF (`python3 -m pip install --user pymupdf`) สำหรับวัดขนาดฟอนต์และ render หน้า
 
 ## 1. TinyTeX (XeLaTeX โดยไม่ต้อง sudo)
 

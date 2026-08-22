@@ -7,16 +7,28 @@ usage:
 
   python3 exam_blueprint.py --part math --difficulty standard --count 50 --set 8
   python3 exam_blueprint.py --list                 # ดูรหัสหัวข้อ/ระดับ/พรีเซ็ตทั้งหมด
+  python3 exam_blueprint.py --part comp --set 2 --json     # + บันทึกพิมพ์เขียวเป็นไฟล์
 
 ผลลัพธ์คือตาราง "ข้อที่ / หัวข้อ / ระดับความยาก / รูปแบบ" + โควตาที่ต้องคุม
 + ชื่อไฟล์และข้อความปกที่ต้องใช้ เอาไปวางเป็นคอมเมนต์หัวไฟล์ verify.py ได้เลย
 
 สคริปต์นี้ไม่ได้ออกโจทย์ให้ — มันล็อกสัดส่วนไว้ก่อน เพื่อไม่ให้เขียนไปเรื่อย ๆ
 แล้วได้ข้อง่ายกระจุกหรือหัวข้อซ้ำ
+
+`--json` เขียนพิมพ์เขียวเดียวกันนี้ออกมาเป็นไฟล์ที่เครื่องอ่านได้ ซึ่ง /posn-score
+/posn-calibrate และ preflight.py ใช้เป็นแหล่งความจริงว่าข้อไหนหัวข้ออะไรระดับไหน
+ตารางที่พิมพ์ออกจอเป็นของคนอ่าน ไฟล์ JSON เป็นของสคริปต์ — เนื้อในชุดเดียวกัน
 """
 import argparse
+import datetime
+import json
 import random
 import sys
+from pathlib import Path
+
+# ที่เก็บข้อมูลทั้งหมดของผู้ใช้ — พิมพ์เขียว ผลสอบ และดัชนีโจทย์
+POSN_ROOT = Path.home() / 'Documents' / 'POSN.Computer'
+BLUEPRINT_DIR = POSN_ROOT / 'blueprints'
 
 # ---------------------------------------------------------------- หัวข้อ
 
@@ -218,11 +230,42 @@ def print_plan(rows, part, args):
     folder = {'math': 'พาร์ทคณิตศาสตร์', 'comp': 'พาร์ทคอมพิวเตอร์',
               'both': 'ฉบับเต็ม'}[part]
     base = f'ข้อสอบเทียม_สอวนคอมพิวเตอร์_{tag}{args.set}'
-    print(f'  ~/Downloads/POSN.Computer/ข้อสอบเทียม/{folder}/{base}.pdf')
-    print(f'  ~/Downloads/POSN.Computer/ข้อสอบเทียม/{folder}/เฉลย_{base}.pdf')
+    outdir = POSN_ROOT / 'ข้อสอบเทียม' / folder
+    print(f'  {outdir}/{base}.pdf')
+    print(f'  {outdir}/เฉลย_{base}.pdf')
     print(f'  รหัสชุดวิชาบนปก: 0000{ {"math": "0", "comp": "1", "both": "2"}[part] }'
           f'{args.set:02d}')
     print('=' * 78)
+
+
+def dump_json(rows, part, fmt, diff, args, target):
+    """เขียนพิมพ์เขียวเป็นไฟล์ JSON ให้สคริปต์อื่นอ่าน — ห้ามเขียนทับของเดิม
+
+    ที่เก็บมาตรฐานคือ blueprints/<part>-set<N>.json ถ้ามีไฟล์นั้นอยู่แล้วแปลว่าชุดนี้
+    ถูกวางแผนไปแล้ว การเขียนทับจะทำให้ผลสอบที่บันทึกไว้ชี้ไปยังหัวข้อ/ระดับที่ไม่ตรงกับ
+    ข้อสอบจริงที่ผู้ใช้ทำ — จึงหยุดทันที ให้คนตัดสินใจว่าจะลบเองหรือเปลี่ยนเลขชุด
+    """
+    if target.exists():
+        sys.exit(f'มีพิมพ์เขียวของชุดนี้อยู่แล้ว: {target}\n'
+                 f'ถ้าตั้งใจจะวางแผนชุดนี้ใหม่ ให้ลบไฟล์เดิมเองก่อน '
+                 f'หรือเปลี่ยน --set เป็นเลขที่ยังไม่มี')
+    data = {
+        'part': part,
+        'set': args.set,
+        'difficulty': diff,
+        'format': fmt,
+        'count': len(rows),
+        'created': datetime.date.today().isoformat(),
+        'questions': [
+            {'n': r['no'], 'topic': r['topic'], 'level': r['level'],
+             'format': r['format'], 'est_min': MINUTES[r['level']]}
+            for r in rows
+        ],
+    }
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n',
+                      encoding='utf-8')
+    print(f'\nพิมพ์เขียว JSON: {target}')
 
 
 def main():
@@ -240,6 +283,9 @@ def main():
     p.add_argument('--set', type=int, default=1, help='เลขชุด')
     p.add_argument('--seed', type=int, default=0, help='0 = ใช้เลขชุดเป็น seed')
     p.add_argument('--list', action='store_true', help='แสดงรหัสหัวข้อ/ระดับ/พรีเซ็ต')
+    p.add_argument('--json', nargs='?', const='AUTO', default=None, metavar='PATH',
+                   help='บันทึกพิมพ์เขียวเป็น JSON (ไม่ใส่ path = '
+                        'blueprints/<part>-set<N>.json)')
     args = p.parse_args()
 
     if args.list:
@@ -301,6 +347,11 @@ def main():
                                   count, 2 if fmt == 'fill' else 1, diff, focus, 1, rng)
 
     print_plan(rows, part, args)
+
+    if args.json is not None:
+        target = (BLUEPRINT_DIR / f'{part}-set{args.set}.json'
+                  if args.json == 'AUTO' else Path(args.json).expanduser())
+        dump_json(rows, part, fmt, diff, args, target)
 
 
 if __name__ == '__main__':

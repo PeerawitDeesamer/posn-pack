@@ -1,0 +1,97 @@
+% preamble มาตรฐานของไฟล์ข้อสอบ — ก๊อปไฟล์นี้ไปวางในโฟลเดอร์งาน แล้วบรรทัดแรกของ
+% examN.tex เขียนว่า \input{preamble-exam}
+%
+% ค่าทุกตัวในไฟล์นี้มีเหตุผลกำกับไว้ข้าง ๆ อย่าเปลี่ยนโดยไม่อ่านเหตุผลก่อน
+
+\documentclass[14pt]{extarticle}
+% extarticle 14pt ไม่ใช่ article 12pt — ขนาด class คุมขนาดสูตรคณิตศาสตร์ (Computer
+% Modern) ถ้าลดเป็น 12pt สูตรจะเล็กกว่าตัวหนังสือไทยจนดูไม่สมดุล
+% ปรับขนาดตัวหนังสือไทยที่ Scale เท่านั้น อย่าแตะ class size
+
+\usepackage[a4paper,top=2.2cm,bottom=2.0cm,left=2.2cm,right=2.0cm,headsep=8pt]{geometry}
+% ข้อสอบจริงเป็นกระดาษ Letter (612x792 pt) เพราะทำจาก Word — เราใช้ A4 โดยตั้งใจ
+% เพราะปรินต์ในไทยสะดวกกว่า ถ้าผู้ใช้ขอ "เหมือนจริงทุกอย่าง" ค่อยเปลี่ยนเป็น letterpaper
+
+\usepackage{fontspec}
+\usepackage{amsmath,amssymb}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{array}
+\usepackage{tikz}
+\usepackage{lastpage}      % ต้องคอมไพล์ 2 รอบ ไม่งั้นเลขหน้ารวมเป็น ??
+\usepackage{needspace}
+\usetikzlibrary{calc}
+
+\setmainfont{THSarabunNew}[
+  Extension = .ttf,
+  UprightFont = *,
+  BoldFont = * Bold,
+  ItalicFont = * Italic,
+  BoldItalicFont = * BoldItalic,
+  Scale = 1.112]
+% อ้างชื่อไฟล์ + Extension ไม่ใช่ชื่อ family — \setmainfont{TH Sarabun New} จะพังด้วย
+% `The font "TH Sarabun New BoldItalic" cannot be found` เพราะ fontconfig ตั้งชื่อ
+% หน้า BoldItalic ไม่ตรงกับที่ fontspec เดา ต้องอ้างไฟล์ตรง ๆ
+%
+% ไม่ต้องใส่ Path= เพราะ install.sh ก๊อปฟอนต์เข้า
+% TEXMFHOME/fonts/truetype/public/thsarabunnew/ แล้ว kpathsea หาเจอเอง (portable
+% ข้ามเครื่อง) ถ้าคอมไพล์แล้วหาฟอนต์ไม่เจอ ให้รัน install.sh --check ก่อน
+% อย่าเติม path เต็มกลับเข้าไป
+%
+% Scale = 1.112 วัดมาแล้วให้ตรงข้อสอบจริงปี 68 (ฟอนต์เนื้อความ 15.95 pt) อย่าแก้ด้วยการกะ
+% ถ้าต้องปรับใหม่ ดู docs/FONT.md
+
+\XeTeXlinebreaklocale "th"
+\XeTeXlinebreakskip = 0pt plus 1pt
+% จำเป็นเสมอ — ไม่มีสองบรรทัดนี้ ภาษาไทยจะไม่ตัดบรรทัดเลย เพราะไม่มีช่องว่างระหว่างคำ
+% XeTeX จึงมองทั้งย่อหน้าเป็นคำเดียว ข้อความจะทะลุขอบขวาออกนอกหน้า
+
+\setlength{\parindent}{0pt}
+\linespread{1.06}          % ไฟล์เฉลยทับเป็น 1.04 ใน preamble-answer.tex
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyhead[R]{\small หน้า~\thepage/\pageref{LastPage}}
+
+% ---------------------------------------------------------------- ตัวเลือก ก/ข/ค/ง
+%
+% ต้องใช้ tabular + p{} ไม่ใช่ \makebox — \makebox ไม่ตัดบรรทัด ตัวเลือกยาวจะเขียนทับ
+% ตัวเลือกถัดไป (เคยพลาดมาแล้วในข้อ 13 กับ 22 ชุดที่ 1) tabular ตัดบรรทัดให้แต่
+% ไม่ขึ้น Overfull warning จึงต้องดูจากภาพ PNG ที่ preflight.py ชี้ให้เสมอ
+%
+% เลือกให้ถูก: ตัวเลือกยาวเกิน ~20 ตัวอักษรไทยใช้ \chtwo / ยาวเกินครึ่งบรรทัดใช้ \chstack
+
+\newcommand{\chfour}[4]{%      % ตัวเลือกสั้น เรียง 4 คอลัมน์
+  \par\vspace{4pt}\noindent\hspace*{1.4em}%
+  \begin{tabular}{@{}p{0.20\textwidth}p{0.20\textwidth}p{0.20\textwidth}p{0.20\textwidth}@{}}
+    ก.~~#1 & ข.~~#2 & ค.~~#3 & ง.~~#4
+  \end{tabular}\par\vspace{3pt}}
+\newcommand{\chtwo}[4]{%       % ตัวเลือกยาวปานกลาง 2x2
+  \par\vspace{4pt}\noindent\hspace*{1.4em}%
+  \begin{tabular}{@{}p{0.42\textwidth}p{0.42\textwidth}@{}}
+    ก.~~#1 & ข.~~#2 \\[4pt]
+    ค.~~#3 & ง.~~#4
+  \end{tabular}\par\vspace{3pt}}
+\newcommand{\chstack}[4]{%     % ตัวเลือกยาวมาก เรียงลงมา 4 บรรทัด
+  \par\vspace{3pt}\noindent\hspace*{1.4em}ก.~~#1\par\vspace{1pt}%
+  \noindent\hspace*{1.4em}ข.~~#2\par\vspace{1pt}%
+  \noindent\hspace*{1.4em}ค.~~#3\par\vspace{1pt}%
+  \noindent\hspace*{1.4em}ง.~~#4\par\vspace{2pt}}
+% อาร์กิวเมนต์ทั้งสี่ของ \chstack ต้องอยู่บรรทัดเดียวกันแม้จะยาว — check_answer_key.py
+% อ่านอาร์กิวเมนต์ต่อกันโดยต้องเจอ }{ ติดกัน ขึ้นบรรทัดใหม่คั่นแล้วมันจะหยุดอ่าน
+% (LaTeX คอมไพล์ผ่านปกติ จึงไม่เห็นความผิดจากภาพ)
+
+\newcommand{\note}[1]{\par\vspace{1pt}\noindent\hspace*{1.4em}\textbf{หมายเหตุ}~~#1\par}
+
+\newcommand{\bul}[1]{\par\vspace{2pt}\noindent\hspace*{2.0em}$\bullet$~~%
+  \parbox[t]{0.82\textwidth}{#1}\par\vspace{2pt}}
+% ใช้ \bul แทน itemize ข้างในข้อ — check_answer_key.py นับ \item ทั้งไฟล์เป็นข้อสอบ
+% ถ้ามี itemize ซ้อนอยู่ในโจทย์ เลขข้อจะเลื่อนตั้งแต่จุดนั้นเป็นต้นไป
+
+\newlist{qlist}{enumerate}{1}
+\setlist[qlist]{label=\arabic*., leftmargin=1.5em, itemsep=7pt, topsep=6pt}
+% ชื่อ qlist สำคัญ — check_answer_key.py หาข้อสอบจาก qlist (ปรนัย) และ qlistb (อัตนัย)
+
+% ใส่ \Needspace{5\baselineskip} ก่อน \item ทุกข้อ (ข้ออัตนัยใช้ 6 เฉลยใช้ 4)
+% ไม่งั้นจะเจอโจทย์อยู่ท้ายหน้า แต่ตัวเลือกไปอยู่หน้าถัดไป

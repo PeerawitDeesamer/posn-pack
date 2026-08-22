@@ -1,133 +1,91 @@
-# POSN Pack — skill สร้างข้อสอบเทียม สอวน. คอมพิวเตอร์ (ค่าย 1)
+# POSN Mock Exam Builder
 
-Claude Code skill สำหรับสร้างข้อสอบเทียม พร้อมเฉลยละเอียด เป็น PDF ด้วย XeLaTeX
-ฟอนต์ TH Sarabun New ขนาดตรงกับข้อสอบจริงปี 68 แล้วอัปขึ้น Google Drive
+สกิล Claude Code สำหรับสร้าง **ข้อสอบเทียม สอวน. คอมพิวเตอร์ (คัดเลือกเข้าค่าย 1)**
+พร้อมเฉลย เป็น PDF ที่ฟอนต์ ขนาดตัวอักษร และ layout ตรงกับข้อสอบจริง
+แล้วอัปขึ้น Google Drive — พร้อมวงจรป้อนกลับที่เอาผลสอบจริงของผู้ใช้มาออกแบบชุดถัดไป
 
-สั่งได้ว่าจะเอา
+## ติดตั้ง
 
-| เลือก | ตัวเลือก |
+```bash
+bash install.sh            # ลง TinyTeX + ฟอนต์ + LaTeX packages + PyMuPDF + rclone
+bash install.sh --check    # ตรวจอย่างเดียว ไม่ติดตั้ง
+```
+
+ย้ายเครื่อง: `bash pack.sh` แล้วเอา tarball ไปแตกที่เครื่องใหม่ ดู [docs/INSTALL.md](docs/INSTALL.md)
+
+## โครงสร้าง
+
+```
+SKILL.md          คำสั่งหลัก 250 บรรทัด — ถูกโหลดเข้า context ทุกครั้งที่สกิลทำงาน
+docs/             รายละเอียดที่อ่านเฉพาะตอนต้องใช้
+assets/           ไฟล์ LaTeX จริง (preamble + macro + ตัวอย่างเฉลย) ก๊อปไปใช้ได้เลย
+scripts/          เครื่องมือทั้งหมด
+install.sh        ติดตั้ง/ตรวจในคำสั่งเดียว
+pack.sh           แพ็กไปเครื่องใหม่
+```
+
+### scripts/
+
+| สคริปต์ | หน้าที่เดียวของมัน |
 |---|---|
-| พาร์ท | คณิตศาสตร์ / วิทยาการคำนวณ / ทั้งฉบับตามโครงปี 66-68 |
-| รูปแบบ | ปรนัย 4 ตัวเลือก / อัตนัยเติมคำตอบ / ผสมสองตอน |
-| ความยาก | `easy` `standard` (เท่าข้อสอบจริง) `hard` `brutal` — เกณฑ์ 5 ระดับที่วัดได้ |
-| เรื่องที่เน้น | 19 หัวข้อ เช่น เรขาคณิต การนับ ลูป `while` การนับจำนวนครั้งการทำงาน |
-| จำนวนข้อ + เลขชุด | กำหนดเองหรือใช้ค่าปริยาย |
+| `exam_blueprint.py` | สเปก → พิมพ์เขียวรายข้อ (`--json` เขียนไฟล์ที่เครื่องอ่านได้) |
+| `verify_lib.py` | ตรวจว่าคำตอบครบและตัวลวงทุกตัวคำนวณมาจริง แล้วเขียน `verify_out.json` |
+| `check_answer_key.py` | ตารางเฉลยตรงกับตัวเลือกจริงไหม |
+| `measure_font_size.py` | ขนาดฟอนต์เทียบข้อสอบจริง (PyMuPDF) |
+| `exam_index.py` | ดัชนีไอเดียโจทย์ กันโจทย์ซ้ำโดยไม่ต้องเปิด PDF ชุดเก่า |
+| `exam_result.py` | บันทึกและสรุปผลสอบของผู้ใช้ |
+| `preflight.py` | รวมทุกการตรวจไว้ในคำสั่งเดียว + ชี้หน้าที่ต้องดูด้วยตา |
+| `render_pages.py` | แปลงเฉพาะหน้าที่เสี่ยงเป็น PNG |
 
-`scripts/exam_blueprint.py` แปลงสเปกพวกนี้เป็นพิมพ์เขียวรายข้อ (ข้อไหนหัวข้ออะไร ระดับไหน)
-พร้อมประเมินเวลาทำเทียบเวลาสอบจริง 180 นาที ก่อนเขียนโจทย์ข้อแรก
+### docs/
 
-```bash
-python3 scripts/exam_blueprint.py --list          # ดูรหัสหัวข้อ ระดับ พรีเซ็ตทั้งหมด
-python3 scripts/exam_blueprint.py --part comp --format mixed \
-        --difficulty hard --focus pyloop,algocount --count 30 --set 2
-```
+`SPEC.md` สเปกและปก · `DIFFICULTY.md` ระดับความยาก · `COMPUTER-PART.md` พาร์ทวิทยาการคำนวณ ·
+`VERIFY.md` คำนวณคำตอบและตัวลวง · `ANSWER-KEY.md` มาตรฐานเฉลย · `SUBJECTIVE.md` ตอนอัตนัย ·
+`VARIANT.md` โจทย์ไอเดียเดิมหน้าตาใหม่ · `FONT.md` ขนาดฟอนต์ · `DRIVE.md` อัป Drive ·
+`INSTALL.md` / `SETUP.md` ย้ายเครื่อง · `TROUBLESHOOTING.md` error ที่เคยเจอจริง
 
-repo นี้คือชุดติดตั้ง — ลง skill พร้อม toolchain ทั้งหมดบนเครื่องใหม่ในคำสั่งเดียว
-
-## ติดตั้งบนเครื่องใหม่
-
-### วิธีที่ 1 — สั่ง Claude Code (ง่ายสุด)
-
-วางข้อความนี้ใน Claude Code:
+## ไปป์ไลน์
 
 ```
-ติดตั้ง POSN skill จาก https://github.com/PeerawitDeesamer/posn-pack
-git clone แล้วรัน bash install.sh
+สเปก → exam_blueprint.py --json → อ่าน index.jsonl กันซ้ำ → verify.py (คำตอบ + ตัวลวง)
+     → เขียน .tex → xelatex 2 รอบ → preflight.py → ดูภาพเฉพาะหน้าที่มันชี้
+     → ส่งมอบ + rclone → exam_index.py add
 ```
 
-### วิธีที่ 2 — เทอร์มินัล
+## คำสั่งหลังทำข้อสอบเสร็จ
 
-```bash
-git clone https://github.com/PeerawitDeesamer/posn-pack.git
-cd posn-pack
-bash install.sh
-```
+อยู่ใน `~/.claude/commands/` (ไม่ได้อยู่ในสกิล เพราะเป็นคนละจังหวะกับการสร้างข้อสอบ
+จึงไม่ควรกิน context ตอนออกข้อสอบ) และมี subagent `~/.claude/agents/posn-student.md`
 
-### วิธีที่ 3 — บรรทัดเดียว ไม่ต้อง clone
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/PeerawitDeesamer/posn-pack/main/install.sh | bash
-```
-
-`install.sh` รู้ตัวว่าถูก pipe มาแบบไม่มีไฟล์ข้าง ๆ แล้วดึง tarball ของ repo มาเองก่อนติดตั้ง
-ถ้า fork ไปใช้ชื่ออื่น ชี้ repo ใหม่ด้วย `POSN_REPO` ได้ ไม่ต้องแก้ไฟล์:
-
-```bash
-POSN_REPO=owner/repo bash <(curl -fsSL https://raw.githubusercontent.com/owner/repo/main/install.sh)
-```
-
-รอ ~3-5 นาที (TinyTeX 50 MB + rclone 21 MB) เสร็จแล้วเปิด Claude Code สั่งได้เลย เช่น "สร้างข้อสอบเทียม ชุดที่ 6" หรือ
-"ขอพาร์ทคอมชุดที่ 2 แบบยาก เน้นเรื่องลูป" — skill ชื่อ `posn` จะโหลดเอง
-
-## installer ทำอะไรบ้าง
-
-| ขั้น | ทำอะไร |
+| คำสั่ง | ทำอะไร |
 |---|---|
-| 0 | ก๊อป skill ไป `~/.claude/skills/posn` |
-| 1 | เช็ค `curl` `python3` `perl` `poppler-utils` |
-| 2 | ลง TinyTeX ที่ `~/.TinyTeX` (ตรวจ arch เอง) |
-| 3 | `tlmgr install` แพ็กเกจ LaTeX ที่ต้องใช้ (รวม `extsizes` สำหรับ `extarticle` 14pt) |
-| 4 | โหลดฟอนต์ TH Sarabun New 4 น้ำหนัก ลง fontconfig **และ** TEXMF tree |
-| 5 | ลง rclone ที่ `~/.local/bin/rclone` |
-| 6 | สร้าง `~/Downloads/POSN.Computer/` พร้อมโฟลเดอร์แยกตามพาร์ท |
-| 7 | คอมไพล์ไฟล์ทดสอบ แล้วเช็คด้วย `pdffonts` ว่าฝังครบทั้ง 4 น้ำหนัก |
+| `/posn-score <part> <set>` | บันทึกผลสอบ ถามแค่ 2 คำถาม ที่เหลือ derive จากพิมพ์เขียว |
+| `/posn-why <part> <set> <ข้อ>` | สัมภาษณ์ว่าทำไมข้อนั้นผิด แล้วจัดประเภทความผิดให้ |
+| `/posn-weakness` | รวมจุดอ่อนข้ามทุกชุด เสนอคำสั่งชุดถัดไป |
+| `/posn-calibrate` | ป้ายความยากกับเวลาที่ประเมิน ตรงความจริงไหม |
+| `/posn-feynman <part> <set> <ข้อ>` | ให้ผู้ใช้อธิบายกลับ วัดว่าเฉลยข้อนั้นดีพอไหม |
+| `/posn-variant <source>` | ออกโจทย์ไอเดียเดิม หน้าตาใหม่ |
 
-- รันซ้ำได้ ข้ามขั้นที่ทำไว้แล้วเอง
-- ลงในโฮมทั้งหมด **ไม่ใช้ sudo**
-- รองรับ Linux (x86_64 / aarch64) และ macOS (arm64 / x86_64)
-- `bash install.sh --check` = ตรวจอย่างเดียว ไม่ติดตั้ง
-- `bash install.sh --no-rclone` = ข้ามส่วน Google Drive
+**คำสั่งเหล่านี้ `install.sh` ไม่ได้พาไปด้วยตอนย้ายเครื่อง** ต้องก๊อป `~/.claude/commands/posn-*.md`
+กับ `~/.claude/agents/posn-student.md` เอง
 
-ต้องมี `poppler-utils` ระดับระบบ (`apt install poppler-utils` / `brew install poppler`)
-ไม่มีก็ยังคอมไพล์ได้ แต่วัดขนาดฟอนต์และดูภาพหน้าไม่ได้
+## ข้อมูลของผู้ใช้
 
-## สองอย่างที่ repo นี้ให้ไม่ได้
-
-1. **ไฟล์ PDF ข้อสอบจริง สอวน. ปี 64-68 และ `เนื้อหาที่ใช้สอบ.pdf`**
-   เป็นงานลิขสิทธิ์ของมูลนิธิ สอวน. `.gitignore` กัน `*.pdf` ไว้แล้ว ห้ามอัปขึ้น repo สาธารณะ
-   ให้ก๊อปเองจากเครื่องเก่าหรือ Google Drive ไปไว้ที่
-   `~/Downloads/POSN.Computer/ไฟล์ข้อสอบ/`
-   ไม่มีไฟล์พวกนี้ skill ยังสร้างข้อสอบได้ แต่เทียบขนาดฟอนต์กับของจริงไม่ได้
-   และเช็คขอบเขตเนื้อหาไม่ได้
-
-2. **การ authorize Google Drive** ต้องเปิด browser ทำเอง ครั้งเดียว:
-   ```bash
-   ~/.local/bin/rclone config create gdrive drive scope=drive
-   ```
-   ทางลัด: ก๊อป `~/.config/rclone/rclone.conf` จากเครื่องเก่ามาวางที่เดิม ใช้ token เดิมได้เลย
-   **ไฟล์นั้นมี refresh token — ห้าม commit** (`.gitignore` กันไว้แล้ว)
-
-ก๊อปชุดข้อสอบเทียมที่เคยทำ (`ข้อสอบเทียม/`) มาด้วยจะดี ใช้กันโจทย์ซ้ำกับชุดใหม่
-
-## โครงสร้าง repo
+อยู่ที่ `~/Documents/POSN.Computer/` — **ไม่อยู่ใน repo นี้ และห้าม commit**
 
 ```
-SKILL.md          สเปกข้อสอบ, กติกาการออกข้อสอบ+เฉลย, preamble LaTeX, checklist ก่อนส่งมอบ
-install.sh        ตัวติดตั้ง/ตรวจ
-pack.sh           แพ็ก skill (+PDF ถ้าสั่ง) เป็น tarball ไว้ขนแบบ offline
-docs/SPEC.md      แปลคำสั่งผู้ใช้เป็นสเปก ข้อความบนปก รหัสชุดวิชา
-docs/DIFFICULTY.md        เกณฑ์ความยาก 5 ระดับ วิธีเพิ่ม/ลดอย่างถูกวิธี
-docs/COMPUTER-PART.md     พาร์ทวิทยาการคำนวณ ขอบเขตไพธอน 9 หัวข้อ โครง verify.py
-docs/SUBJECTIVE.md        ตอนอัตนัยเติมคำตอบ แม่แบบ LaTeX และการตรวจ
-docs/INSTALL.md   ขั้นตอนย้ายเครื่อง + ตารางอาการพังที่เจอบ่อย
-docs/SETUP.md     ขั้นตอนติดตั้งแบบทำมือ ถ้า install.sh พัง
-docs/DRIVE.md     รายละเอียดการอัป Drive + วิธีที่ลองแล้วใช้ไม่ได้
-docs/TROUBLESHOOTING.md   error จริงที่เคยเจอและวิธีแก้
-scripts/exam_blueprint.py      สเปก -> พิมพ์เขียวรายข้อ + โควตาที่ต้องคุม
-scripts/check_answer_key.py    ตรวจตารางเฉลยกับตัวเลือกจริง (ปรนัย + อัตนัย)
-scripts/measure_font_size.py   วัดขนาดฟอนต์เทียบข้อสอบจริง
+ไฟล์ข้อสอบ/     ข้อสอบจริงที่ใช้อ้างอิง (ลิขสิทธิ์ของเจ้าของ)
+ข้อสอบเทียม/    PDF ที่ผลิตได้ แยกโฟลเดอร์ตามพาร์ท
+blueprints/     พิมพ์เขียวรายชุด
+results/        ผลสอบของผู้ใช้
+index.jsonl     ไอเดียชี้ขาดของทุกข้อที่เคยออก
 ```
 
-## แก้ skill แล้วอัปกลับ
+## หลักการที่ทั้งระบบยึด
 
-ต้นฉบับที่ Claude Code ใช้จริงคือ `~/.claude/skills/posn/` ส่วน repo นี้คือชุดแจกจ่าย
-แก้ที่ไหนแล้วอย่าลืม sync อีกฝั่ง:
-
-```bash
-cd "$HOME/Downloads/Posn Pack"
-cp -R ~/.claude/skills/posn/{SKILL.md,docs,scripts} .
-git add -A && git commit -m "update skill" && git push
-```
-
-**ห้าม `git add -f` ไฟล์ PDF** — `.gitignore` กันไว้เพราะข้อสอบจริงเป็นลิขสิทธิ์มูลนิธิ สอวน.
-และ repo นี้ public
+- **ห้ามเดา** ทั้งคำตอบและตัวลวงต้องคำนวณจากสคริปต์ก่อนพิมพ์ลงไฟล์
+- **แหล่งความจริงเดียว** ข้อมูลชุดหนึ่งมีที่อยู่ที่เดียว ที่เหลือชี้ไปหามัน
+- **ไม่มี fallback** precondition ไม่ครบ = หยุดพร้อมบอกเหตุผล ไม่เดาค่าแทน
+- **แยกหน้าที่** สคริปต์หนึ่งตัวทำเรื่องเดียว
+- **ประหยัด context** สิ่งที่เครื่องตรวจแทนได้ ต้องให้เครื่องตรวจ และห้าม render
+  หน้า PDF ที่ไม่มีเหตุผลให้ดู

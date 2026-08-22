@@ -33,17 +33,8 @@
 
 ## แม่แบบ LaTeX
 
-เพิ่มใน preamble ของไฟล์ข้อสอบ
-
-```latex
-\newlist{qlistb}{enumerate}{1}
-\setlist[qlistb]{label=\arabic*., leftmargin=1.5em, itemsep=10pt, topsep=6pt,
-                 start=26}                       % start = เลขข้อแรกของตอนนี้
-\newcommand{\fillbox}{\par\vspace{4pt}\noindent\hspace*{2.2em}%
-  ตอบ~\dotfill\hspace*{2em}\par\vspace{2pt}}
-\newcommand{\sectionhead}[3]{\par\vspace{10pt}\noindent%
-  \textbf{#1}\hfill\textbf{#2}\hfill\textbf{#3}\par\vspace{2pt}\hrule\vspace{6pt}}
-```
+`qlistb` `\fillbox` `\sectionhead` ประกาศไว้ใน `assets/macros-comp.tex` แล้ว
+ก๊อปไปวางแล้ว `\input{macros-comp}` — อย่าลืมแก้ `start=` ให้ตรงเลขข้อแรกจริงของตอนนี้
 
 หัวตอนและตัวข้อ
 

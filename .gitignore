@@ -1,18 +1,20 @@
-# ห้ามอัป PDF ขึ้น repo สาธารณะ
-# - ข้อสอบจริง สอวน. เป็นงานลิขสิทธิ์ของมูลนิธิ สอวน. ไม่ใช่ของเรา
-# - ข้อสอบเทียมที่สร้างเอง ถ้าจะแชร์ ให้ลบบรรทัดล่างนี้ออกเอง
-*.pdf
+# ข้อมูลส่วนตัวของผู้ใช้ — อยู่ที่ ~/Documents/POSN.Computer/ ไม่ควรหลุดเข้ามาที่นี่
+blueprints/
+results/
+index.jsonl
 
-# ผลพลอยได้จากการคอมไพล์ LaTeX
+# ไฟล์ข้อสอบและผลลัพธ์ ไม่เก็บใน repo
+*.pdf
+*.png
+ข้อสอบเทียม/
+ไฟล์ข้อสอบ/
+
+# ของชั่วคราวจากการคอมไพล์ LaTeX
 *.aux
 *.log
 *.out
-*.synctex.gz
-*.fdb_latexmk
-*.fls
+verify_out.json
 
+# ของที่ Python สร้างเอง
 __pycache__/
 *.pyc
-
-# ไฟล์ลับ — มี refresh token ของ Google Drive
-rclone.conf
