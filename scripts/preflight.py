@@ -36,6 +36,7 @@ DIST_LO, DIST_HI = 0.20, 0.30      # สัดส่วนที่ยอมร�
 ASCENDING_MAX = 0.60               # ข้อที่ตัวเลือกเรียงน้อยไปมาก ห้ามเกินสัดส่วนนี้
 LEVEL_DRIFT = 0.20                 # จำนวนข้อรายระดับ เพี้ยนจากพิมพ์เขียวได้ไม่เกินนี้
 FONT_TOL = 0.01                    # ratio ต้องอยู่ในช่วง 1.00 ± ค่านี้
+MIN_STEPS = 3                      # \stepa ต่อข้อ — นับจากไฟล์เฉลยอ้างอิง
 
 # ตรวจเฉพาะข้างในบล็อกโค้ดกับ \code{} — คำอย่าง "for" ในข้อความอังกฤษไม่ใช่โค้ด
 OUT_OF_SCOPE = r'\b(def|for|range|import|lambda|return)\b|\.(split|append|upper|lower)\('
@@ -125,10 +126,24 @@ def check_distribution(ctx):
     if not total:
         return True, 'ไม่มีข้อปรนัย ข้ามการตรวจ'
     parts = ' '.join(f'{L}={dist.get(L, 0)}' for L in cak.LETTERS)
-    off = [L for L in cak.LETTERS
-           if not (DIST_LO <= dist.get(L, 0) / total <= DIST_HI)]
+    ideal = total / len(cak.LETTERS)
+
+    def ok(c):
+        """ผ่านถ้าอยู่ในช่วง % หรือห่างจากค่าอุดมคติไม่ถึง 1 ข้อ
+
+        ช่วง 20-30% เป็นเกณฑ์ของชุดขนาดจริง (30-50 ข้อ) แต่ชุดสั้น ๆ มันเป็นไปไม่ได้
+        ทางคณิตศาสตร์ เช่น 5 ข้อ 4 ตัวเลือก: ช่วงบังคับให้ทุกตัวมีตัวละ 1 ข้อ
+        ซึ่งรวมได้ 4 ไม่ใช่ 5 — ไม่ว่าจะจัดอย่างไรก็ FAIL เสมอ
+        จึงเพิ่มเงื่อนไข "ห่างจาก total/4 ไม่ถึง 1 ข้อ" ซึ่งคือความคลาดเคลื่อนจากการปัดเศษ
+        ชุด 50 ข้อค่าอุดมคติคือ 12.5 เงื่อนไขนี้รับ 12-13 ซึ่งอยู่ในช่วง % อยู่แล้ว
+        พฤติกรรมกับชุดขนาดจริงจึงไม่เปลี่ยน ส่วนชุด 5 ข้อรับ 1-2 และยังกัน 0 กับ 3 ไว้
+        """
+        return DIST_LO <= c / total <= DIST_HI or abs(c - ideal) < 1
+
+    off = [L for L in cak.LETTERS if not ok(dist.get(L, 0))]
     if off:
-        return False, f'{parts} — {"/".join(off)} หลุดช่วง {DIST_LO:.0%}-{DIST_HI:.0%}'
+        return False, (f'{parts} — {"/".join(off)} หลุดทั้งช่วง '
+                       f'{DIST_LO:.0%}-{DIST_HI:.0%} และช่วงปัดเศษรอบ {ideal:.2f}')
     return True, parts
 
 
@@ -168,8 +183,17 @@ def check_levels(ctx):
 def check_font(ctx):
     if not REAL_EXAM.exists():
         raise Stop(f'ไม่มีข้อสอบจริงไว้เทียบขนาดฟอนต์: {REAL_EXAM}')
+    # measure_font_size.py ข้ามหน้าปกโดยอ่านหน้า 2-9 เป็นค่าเริ่มต้น ซึ่งใช้ไม่ได้กับ
+    # ชุดสั้นที่ยาวหน้าเดียว (ไม่มีหน้า 2 → "ไม่พบข้อความไทย") จึงบอกช่วงหน้าตามไฟล์จริง
+    try:
+        import pymupdf
+        with pymupdf.open(ctx['exam_pdf']) as d:
+            npages = d.page_count
+    except ImportError:
+        raise Stop('ต้องมี PyMuPDF จึงจะวัดขนาดฟอนต์ได้')
+    mine_pages = f'2-{min(npages, 9)}' if npages >= 2 else '1-1'
     code, out = run([sys.executable, str(SCRIPTS / 'measure_font_size.py'),
-                     str(REAL_EXAM), str(ctx['exam_pdf'])])
+                     str(REAL_EXAM), str(ctx['exam_pdf']), '2-7', mine_pages])
     m = re.search(r'MEDIAN RATIO \(เรา/จริง\) = ([\d.]+)', out)
     if code != 0 or not m:
         return False, out.splitlines()[-1] if out else f'exit {code}'
@@ -236,6 +260,47 @@ def check_set_free(ctx):
                    f'เปลี่ยนเลขชุดด้วย next_set.py')
 
 
+def check_answer_sections(ctx):
+    """ทุกข้อในเฉลยต้องครบ 6 ส่วน และมีวิธีทำอย่างน้อย 3 ขั้น
+
+    ตัวเลข 3 ขั้นไม่ได้ตั้งเอง — นับจากไฟล์เฉลยอ้างอิงสองไฟล์ที่ผู้ใช้ยึดเป็นแบบ
+    (ตัวอย่างไฟล์เฉลย คอม.pdf 30 ข้อ / ตัวอ่างไฟล์เฉลย คณิต.pdf 50 ข้อ) ทั้งสองไฟล์
+    มี ขั้นที่1-3 ครบ 100% ของข้อ และมี แนวคิด/วิธีทำ/ตัวตรวจเร็ว/ทำไมตัวเลือกอื่นผิด/
+    จุดพลาดที่พบบ่อย ครบทุกข้อเช่นกัน
+
+    แบ่งบล็อกด้วย \\ansline เพราะเป็นหลักที่มีข้อละครั้งเดียวแน่นอน (check_answer_key
+    บังคับให้จำนวน \\ansline เท่ากับจำนวนข้ออยู่แล้ว) ใช้ \\item ไม่ได้ เพราะเฉลย
+    อาจไล่เลขข้อเองด้วย \\qsep แทนการใส่ใน qlist
+    """
+    src = ctx['answer_tex'].read_text(encoding='utf-8')
+    src = re.sub(r'(?m)^\s*%.*$', '', src)          # ตัดคอมเมนต์ ไม่งั้นตัวอย่างในคอมเมนต์นับด้วย
+    cuts = [m.start() for m in re.finditer(r'\\ansline\{', src)]
+    if not cuts:
+        return False, 'ไม่มี \\ansline เลยในไฟล์เฉลย'
+    blocks = [src[a:b] for a, b in zip(cuts, cuts[1:] + [len(src)])]
+
+    need = [('\\idea{', 'แนวคิด'), ('\\howto', 'วิธีทำ'), ('\\ansfinal{', 'ตอบ'),
+            ('\\quickck{', 'ตัวตรวจเร็ว'), ('\\pitfall{', 'จุดพลาดที่พบบ่อย')]
+    bad = []
+    for i, b in enumerate(blocks, start=1):
+        miss = [thai for mac, thai in need if mac not in b]
+        # ข้อปรนัยใช้ \whywrong ข้ออัตนัยใช้ \wrongans — ต้องมีอย่างน้อยหนึ่งอย่าง
+        if '\\whywrong{' not in b and '\\wrongans{' not in b:
+            miss.append('ทำไมตัวเลือกอื่นผิด / คำตอบที่มักเขียนผิด')
+        steps = b.count('\\stepa{')
+        if steps < MIN_STEPS:
+            miss.append(f'วิธีทำมีแค่ {steps} ขั้น (ต้อง >= {MIN_STEPS})')
+        if miss:
+            bad.append(f'ข้อ {i}: ' + ', '.join(miss))
+    if bad:
+        return False, f'{len(bad)} ข้อไม่ครบ — ' + ' | '.join(bad[:4]) + \
+                      (' ...' if len(bad) > 4 else '')
+    steps = [b.count('\\stepa{') for b in blocks]
+    return True, (f'{len(blocks)} ข้อครบ 6 ส่วน · ขั้นวิธีทำ '
+                  f'น้อยสุด {min(steps)} มากสุด {max(steps)} '
+                  f'เฉลี่ย {sum(steps) / len(steps):.1f}')
+
+
 def check_index(ctx):
     code, out = run([sys.executable, str(SCRIPTS / 'exam_index.py'), 'check',
                      ctx['part'], str(ctx['set']), '--ideas', str(ctx['ideas_path'])])
@@ -256,6 +321,7 @@ CHECKS = [
     ('ขนาดฟอนต์เทียบข้อสอบจริง', check_font),
     ('ไม่มี ^! ใน log', check_log),
     ('ไวยากรณ์อยู่ในขอบเขตพาร์ทคอม', check_scope),
+    ('เฉลยครบ 6 ส่วน + วิธีทำ >= 3 ขั้น', check_answer_sections),
     ('ไอเดียไม่ซ้ำกับ index.jsonl', check_index),
     ('เลขชุดไม่ทับของบน Drive', check_set_free),
 ]
