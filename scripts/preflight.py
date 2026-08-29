@@ -39,7 +39,7 @@ FONT_TOL = 0.01                    # ratio ต้องอยู่ในช่�
 MIN_STEPS = 3                      # \stepa ต่อข้อ — นับจากไฟล์เฉลยอ้างอิง
 
 # ตรวจเฉพาะข้างในบล็อกโค้ดกับ \code{} — คำอย่าง "for" ในข้อความอังกฤษไม่ใช่โค้ด
-OUT_OF_SCOPE = r'\b(def|for|range|import|lambda|return)\b|\.(split|append|upper|lower)\('
+OUT_OF_SCOPE = r'\b(def|for|range|import|lambda|return)\b|\.(split|append|sort)\('
 CODE_BLOCK = re.compile(r'\\begin\{pycode\}(.*?)\\end\{pycode\}|\\code\{([^{}]*)\}',
                         re.S)
 
@@ -238,18 +238,22 @@ def check_set_free(ctx):
         raise Stop(f'ไม่มี rclone ที่ {ns.RCLONE} — ตรวจไม่ได้ว่าจะทับของบน Drive ไหม')
     target = (f'ข้อสอบเทียม_สอวนคอมพิวเตอร์_'
               f'{ns.TAG[ctx["part"]]}{ctx["set"]}.pdf')
+    # ไล่ทั้ง remote แบบ recursive เหมือน next_set.py ไม่ใช่เฉพาะโฟลเดอร์ของพาร์ท
+    # เพราะสองเหตุผล: โฟลเดอร์ของพาร์ทอาจยังไม่มี (ชุดแรกของพาร์ทนั้น) ซึ่ง rclone
+    # ตอบ "directory not found" แล้วเดิมถูกตีความว่าเรียก Drive ไม่ได้ · และไฟล์เก่า
+    # บางชุดถูกอัปลอยไว้ที่รากก่อนจะมีการแยกโฟลเดอร์ การดูแค่โฟลเดอร์พาร์ทจึงมองไม่เห็น
+    # แล้วปล่อยให้ทับของเดิมได้
     # rclone เขียน NOTICE ลง stderr — ต้องอ่านเฉพาะ stdout ไม่งั้น JSON พัง
-    proc = subprocess.run([str(ns.RCLONE), 'lsjson',
-                           f'{ns.REMOTE}/{ns.FOLDER[ctx["part"]]}'],
+    proc = subprocess.run([str(ns.RCLONE), 'lsjson', '-R', ns.REMOTE],
                           capture_output=True, text=True)
-    if proc.returncode != 0:
-        raise Stop('เรียก Drive ไม่ได้ จึงตรวจไม่ได้ว่าเลขชุดนี้ทับของเดิมไหม')
     try:
         listing = json.loads(proc.stdout)
     except json.JSONDecodeError:
-        raise Stop('อ่านรายการไฟล์บน Drive ไม่ได้')
+        tail = proc.stderr.strip().splitlines()[-1] if proc.stderr.strip() else ''
+        raise Stop(f'เรียก Drive ไม่ได้ จึงตรวจไม่ได้ว่าเลขชุดนี้ทับของเดิมไหม\n  {tail}')
 
-    hit = next((f for f in listing if f['Name'] == target), None)
+    hit = next((f for f in listing
+                if f['Path'].rsplit('/', 1)[-1] == target), None)
     if hit is None:
         return True, f'ชุดที่ {ctx["set"]} ยังไม่มีบน Drive'
     mine = ctx['exam_pdf'].stat().st_size
