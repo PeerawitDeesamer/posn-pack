@@ -1,3 +1,5 @@
+> **Moved to [PeerawitDeesamer/claude-skills](https://github.com/PeerawitDeesamer/claude-skills).** This repo is kept for old links and is no longer updated.
+
 # POSN Mock Exam Builder
 
 สกิล Claude Code สำหรับสร้าง **ข้อสอบเทียม สอวน. คอมพิวเตอร์ (คัดเลือกเข้าค่าย 1)**
